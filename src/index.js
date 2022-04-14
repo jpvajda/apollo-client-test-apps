@@ -3,10 +3,12 @@ import { render } from "react-dom";
 import {
   ApolloClient,
   InMemoryCache,
+  useLazyQuery,
   ApolloProvider,
   useQuery,
   gql,
   ApolloLink,
+  NetworkStatus,
 } from "@apollo/client";
 import { createHttpLink } from "apollo-link-http";
 import { MultiAPILink } from "@habx/apollo-multi-endpoint-link";
@@ -30,7 +32,7 @@ const client = new ApolloClient({
 //Exchange Rate Code Start
 
 const EXCHANGE_RATES = gql`
-  query GetExchangeRates @api(contextKey: exchanges) {
+  query GetExchangeRates @api(name: exchanges) {
     rates(currency: "USD") {
       currency
       rate
@@ -67,7 +69,10 @@ const GET_DOGS = gql`
 `;
 
 function Dogs({ onDogSelected }) {
-  const { loading, error, data } = useQuery(GET_DOGS);
+  const { loading, error, data } = useQuery(GET_DOGS, {
+    fetchPolicy: "network-only", // Doesn't check cache before making a network request
+    nextFetchPolicy: "cache-first", // Used for subsequent executions
+  });
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error :(</p>;
@@ -93,15 +98,59 @@ const GET_DOG_PHOTO = gql`
 `;
 
 function DogPhoto({ breed }) {
-  const { loading, error, data } = useQuery(GET_DOG_PHOTO, {
-    variables: { breed },
-    pollInterval: 500,
-  });
+  const { loading, error, data, refetch, networkStatus } = useQuery(
+    GET_DOG_PHOTO,
+    {
+      variables: { breed },
+      notifyOnNetworkStatusChange: true,
+      pollInterval: 0, // fetch the current breed's image from the server every x seconds
+    }
+  );
 
+  if (networkStatus === NetworkStatus.refetch) return "Refetching!";
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error :(</p>;
   return (
-    <img src={data.dog.displayImage} style={{ height: 100, width: 100 }} />
+    <div>
+      <img
+        src={data.dog.displayImage}
+        style={{ height: 100, width: 100 }}
+        alt="it's a dog"
+      />
+      <button
+        onClick={() =>
+          refetch({
+            breed: "dalmatian", // Always refetches a dalmatian instead of original breed
+          })
+        }
+      >
+        Refetch!
+      </button>
+    </div>
+  );
+}
+
+function DelayedQuery() {
+  const [getDog, { loading, error, data }] = useLazyQuery(GET_DOG_PHOTO);
+  if (loading) return <p>Loading ...</p>;
+  if (error) return `Error! ${error}`;
+
+  return (
+    <div>
+      {data?.dog && (
+        <img
+          src={data.dog.displayImage}
+          style={{ height: 100, width: 100 }}
+          alt="it's a dog"
+        />
+      )}
+      <button
+        style={{ display: "flex" }}
+        onClick={() => getDog({ variables: { breed: "bulldog" } })}
+      >
+        Click me!
+      </button>
+    </div>
   );
 }
 
@@ -115,6 +164,7 @@ function App() {
       <h2>Dogs 🐕 </h2>
       <Dogs />
       <DogPhoto />
+      <DelayedQuery />
     </div>
   );
 }
