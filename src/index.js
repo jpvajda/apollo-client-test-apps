@@ -9,6 +9,7 @@ import {
   gql,
   ApolloLink,
   NetworkStatus,
+  useMutation,
 } from "@apollo/client";
 import { createHttpLink } from "apollo-link-http";
 import { MultiAPILink } from "@habx/apollo-multi-endpoint-link";
@@ -23,13 +24,14 @@ const client = new ApolloClient({
       endpoints: {
         exchanges: "https://48p1r2roz4.sse.codesandbox.io",
         dogs: "https://71z1g.sse.codesandbox.io/",
+        todo: "https://sxewr.sse.codesandbox.io/",
       },
       createHttpLink: () => createHttpLink(),
     }),
   ]),
 });
 
-//Exchange Rate Code Start
+//Exchange Rate Code Start //
 
 const EXCHANGE_RATES = gql`
   query GetExchangeRates @api(name: exchanges) {
@@ -55,9 +57,9 @@ function ExchangeRates() {
   ));
 }
 
-//Exchange Rate Code End
+//Exchange Rate Code End //
 
-// Dog Code Start
+// Dog Code Start //
 
 const GET_DOGS = gql`
   query GetDogs @api(name: dogs) {
@@ -154,7 +156,94 @@ function DelayedQuery() {
   );
 }
 
-// Dog Code End
+// Dog Code End //
+
+// To Do Code Start //
+
+const GET_TODOS = gql`
+  query GetTodos @api(name: todo) {
+    todos {
+      id
+      type
+    }
+  }
+`;
+
+function ToDos() {
+  const { loading, error, data } = useQuery(GET_TODOS);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error :(</p>;
+
+  return data.todos.map(({ id, type }) => {
+    let input;
+
+    return (
+      <div key={id}>
+        <p>{type}</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!input.value.trim()) {
+              return;
+            }
+
+            input.value = "";
+          }}
+        >
+          <input
+            ref={(node) => {
+              input = node;
+            }}
+          />
+          <button type="submit">Update Todo</button>
+        </form>
+      </div>
+    );
+  });
+}
+
+const ADD_TODO = gql`
+  mutation AddTodo($text: String!) @api(name: todo) {
+    addTodo(text: $text) {
+      id
+      text
+    }
+  }
+`;
+
+function AddTodo() {
+  let input;
+  const [addTodo, { data, loading, error }] = useMutation(ADD_TODO, {
+    variables: {
+      text: "placeholder",
+    },
+  });
+
+  if (loading) return "Submitting...";
+  if (error) return `Submission error! ${error.message}`;
+
+  return (
+    <div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          addTodo({ variables: { text: input.value } });
+          input.value = "";
+        }}
+      >
+        <input
+          ref={(node) => {
+            input = node;
+          }}
+        />
+        <button type="submit">Add Todo</button>
+      </form>
+    </div>
+  );
+}
+
+// To Do Code End //
 
 function App() {
   return (
@@ -164,7 +253,12 @@ function App() {
       <h2>Dogs 🐕 </h2>
       <Dogs />
       <DogPhoto />
+      <h2>Delayed Query 🤷 </h2>
       <DelayedQuery />
+      <h2>To Dos ✅ </h2>
+      <ToDos />
+      <h2>Add Do ✅ </h2>
+      <AddTodo />
     </div>
   );
 }
