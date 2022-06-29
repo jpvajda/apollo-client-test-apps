@@ -1,5 +1,6 @@
+import { createRoot } from "react-dom/client";
+// import { render } from "react-dom"; React 17
 import React from "react";
-import { render } from "react-dom";
 import {
   ApolloClient,
   InMemoryCache,
@@ -214,7 +215,7 @@ const ADD_TODO = gql`
 
 function AddTodo() {
   let input;
-  const [addTodo, { data, loading, error }] = useMutation(ADD_TODO, {
+  const [addTodo, { loading, error }] = useMutation(ADD_TODO, {
     variables: {
       text: "placeholder",
     },
@@ -263,9 +264,19 @@ function App() {
   );
 }
 
-render(
+// React 18
+const container = document.getElementById("root");
+const root = createRoot(container);
+root.render(
   <ApolloProvider client={client}>
     <App />
-  </ApolloProvider>,
-  document.getElementById("root")
+  </ApolloProvider>
 );
+
+// React 17
+// render(
+//   <ApolloProvider client={client}>
+//     <App />
+//   </ApolloProvider>,
+//   document.getElementById("root")
+// );
