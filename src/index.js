@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 // import { render } from "react-dom"; React 17
-import React from "react";
+import React, { Suspense } from "react";
 import {
   ApolloClient,
   InMemoryCache,
@@ -34,6 +34,8 @@ const client = new ApolloClient({
 
 //Exchange Rate Code Start //
 
+//@TODO add suspense so the exchange rate component loads last
+
 const EXCHANGE_RATES = gql`
   query GetExchangeRates @api(name: exchanges) {
     rates(currency: "USD") {
@@ -50,11 +52,13 @@ function ExchangeRates() {
   if (error) return <p>Error :(</p>;
 
   return data.rates.map(({ currency, rate }) => (
-    <div key={currency}>
-      <p>
-        {currency}: {rate}
-      </p>
-    </div>
+    <Suspense fallback={<p>suspended...</p>}>
+      <div key={currency}>
+        <p>
+          {currency}: {rate}
+        </p>
+      </div>
+    </Suspense>
   ));
 }
 
@@ -81,13 +85,15 @@ function Dogs({ onDogSelected }) {
   if (error) return <p>Error :(</p>;
 
   return (
-    <select name="dog" onChange={onDogSelected}>
-      {data.dogs.map((dog) => (
-        <option key={dog.id} value={dog.breed}>
-          {dog.breed}
-        </option>
-      ))}
-    </select>
+    <Suspense fallback={<p>suspended...</p>}>
+      <select name="dog" onChange={onDogSelected}>
+        {data.dogs.map((dog) => (
+          <option key={dog.id} value={dog.breed}>
+            {dog.breed}
+          </option>
+        ))}
+      </select>
+    </Suspense>
   );
 }
 
@@ -114,22 +120,24 @@ function DogPhoto({ breed }) {
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error :(</p>;
   return (
-    <div>
-      <img
-        src={data.dog.displayImage}
-        style={{ height: 100, width: 100 }}
-        alt="it's a dog"
-      />
-      <button
-        onClick={() =>
-          refetch({
-            breed: "dalmatian", // Always refetches a dalmatian instead of original breed
-          })
-        }
-      >
-        Refetch!
-      </button>
-    </div>
+    <Suspense fallback={<p>suspended...</p>}>
+      <div>
+        <img
+          src={data.dog.displayImage}
+          style={{ height: 100, width: 100 }}
+          alt="it's a dog"
+        />
+        <button
+          onClick={() =>
+            refetch({
+              breed: "dalmatian", // Always refetches a dalmatian instead of original breed
+            })
+          }
+        >
+          Refetch!
+        </button>
+      </div>
+    </Suspense>
   );
 }
 
